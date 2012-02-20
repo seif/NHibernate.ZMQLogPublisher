@@ -23,14 +23,21 @@
 
         IList<string> recievedMessages = new List<string>();
 
-        private bool timeoutReached;
+        private bool stopSubscriber;
 
         private Timer timer;
+
+        private Task subscriberTask;
 
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()
         {
-            this.timer = new Timer(x => this.timeoutReached = true, null, 5000, 5000);
+
+            this.subscriberTask = new Task(this.StartSubscriber);
+            this.subscriberTask.Start(); // start subscriber to listen to messages
+
+            this.timer = new Timer(x => this.stopSubscriber = true, null, 60000, Timeout.Infinite);
+
             Publisher.Start();
             var config = new Configuration();
             config.Configure("nh.sqlite.config");
@@ -46,6 +53,7 @@
         public void RunAfterAllTests()
         {
             sessionFactory.Dispose();
+            this.subscriberTask.Dispose();
             this.timer.Dispose();
             Publisher.Shutdown();
         }
@@ -53,47 +61,48 @@
         [Test]
         public void OpeningSessionPublishesEvent()
         {
-            var task = new Task(StartSubscriber);
-
-            task.Start(); // start subscriber to listen to messages
-            
-            using (var session = sessionFactory.OpenSession())
+            Task[] tasks = new Task[100];
+            for (int i = 0; i < 100; i++)
             {
-                session.Save(
-                    new Dog
-                        {
-                            BirthDate = DateTime.Now, 
-                            BodyWeight = 13, 
-                            Description = "Some dog", 
-                            SerialNumber = "98765"
-                        });
+                tasks[i] = this.OpenSessionAndSaveAnObject(i);
             }
 
-            task.Wait(); // wait until subscriber finished
+            Task.WaitAll(tasks);
+            
+            this.stopSubscriber = true;
 
-            Assert.That(recievedMessages.Count > 0, "No messages recieved.");
-            Assert.That(recievedMessages.Any(m => m.Contains("opened session")), "Did not recieve session opened message.");
+            this.subscriberTask.Wait(); // wait until subscriber finished
+
+            Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), 100, "Did not recieve session opened message for all sessions.");
+        }
+
+        private Task OpenSessionAndSaveAnObject(int i)
+        {
+            return Task.Factory.StartNew(() =>
+                {
+                    using (var session = this.sessionFactory.OpenSession())
+                    {
+                        session.Save(
+                            new Dog { BirthDate = DateTime.Now, BodyWeight = i, Description = "Some dog" + i, SerialNumber = "98765" });
+                    }
+                });
         }
 
         private void StartSubscriber()
         {
             this.recievedMessages.Clear();
-            using (var context = new Context(1))
+
+            using (Socket subscriber = new Socket(SocketType.SUB))
             {
-                using (Socket subscriber = context.Socket(SocketType.SUB))
+                subscriber.Subscribe("", Encoding.Unicode);
+                subscriber.Connect("tcp://localhost:5555");
+
+                string message = "";
+
+                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == 100))
                 {
-                    subscriber.StringToIdentity("Test subscriber", Encoding.Unicode);
-                    subscriber.Subscribe("", Encoding.Unicode);
-                    subscriber.Connect("tcp://localhost:5555");
-                    
-                    string message = "";
-                    
-                    while (!(this.timeoutReached || message.Contains("closing")))
-                    {
-                        message = subscriber.Recv(Encoding.Unicode);
-                        Console.WriteLine(message);
-                        this.recievedMessages.Add(message);
-                    }
+                    message = subscriber.Recv(Encoding.Unicode);
+                    this.recievedMessages.Add(message);
                 }
             }
         }
