@@ -29,6 +29,8 @@
 
         private Task subscriberTask;
 
+        private static int numberOfThreads = 2;
+
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()
         {
@@ -61,8 +63,8 @@
         [Test]
         public void OpeningSessionPublishesEvent()
         {
-            Task[] tasks = new Task[100];
-            for (int i = 0; i < 100; i++)
+            Task[] tasks = new Task[numberOfThreads];
+            for (int i = 0; i < numberOfThreads; i++)
             {
                 tasks[i] = this.OpenSessionAndSaveAnObject(i);
             }
@@ -73,7 +75,7 @@
 
             this.subscriberTask.Wait(); // wait until subscriber finished
 
-            Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), 100, "Did not recieve session opened message for all sessions.");
+            Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), numberOfThreads, "Did not recieve session opened message for all sessions.");
         }
 
         private Task OpenSessionAndSaveAnObject(int i)
@@ -99,7 +101,7 @@
 
                 string message = "";
 
-                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == 100))
+                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == numberOfThreads))
                 {
                     message = subscriber.Recv(Encoding.Unicode);
                     this.recievedMessages.Add(message);
