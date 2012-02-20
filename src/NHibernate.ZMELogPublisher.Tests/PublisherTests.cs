@@ -29,7 +29,7 @@
 
         private Task subscriberTask;
 
-        private static int numberOfThreads = 2;
+        private static int numberOfThreads = 1;
 
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()

@@ -20,4 +20,4 @@ error-*.xml
 StyleCop.Cache
 [Pp]ackages
 *.DotSettings.user
-libzmq.dll
+*.TeamCity.user
