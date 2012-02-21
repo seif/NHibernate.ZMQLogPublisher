@@ -6,29 +6,21 @@ namespace NHibernate.ZMQLogPublisher
 
     public class ZmqLoggerFactory : ILoggerFactory
     {
-        private Socket publisher;
-
         private Context context;
 
-        public ZmqLoggerFactory(Socket publisher)
+        public ZmqLoggerFactory(Context context)
         {
-            this.publisher = publisher;
+            this.context = context;
         }
 
         public IInternalLogger LoggerFor(string keyName)
         {
-            return new ZmqLogger(keyName, this.publisher);
+            return new ZmqLogger(keyName, context);
         }
 
         public IInternalLogger LoggerFor(Type type)
         {
             return this.LoggerFor(type.FullName);
-        }
-
-        public void Shutdown()
-        {
-            this.publisher.Dispose();
-            this.context.Dispose();
         }
     }
 }

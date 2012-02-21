@@ -1,6 +1,7 @@
 namespace NHibernate.ZMQLogPublisher
 {
     using System;
+    using System.Diagnostics;
     using System.Text;
 
     using ZMQ;
@@ -11,17 +12,21 @@ namespace NHibernate.ZMQLogPublisher
     {
         private string keyName;
         
-        private Socket publisher;
+        private Socket sender;
 
-        public ZmqLogger(string keyName, Socket publisher)
+        public ZmqLogger(string keyName, Context context)
         {
             this.keyName = keyName;
-            this.publisher = publisher;
+            
+            this.sender = context.Socket(SocketType.PUSH);
+            
+            this.sender.Connect("inproc://loggers");
+            this.sender = this.sender;
         }
 
         private void Publish(string message)
         {
-            this.publisher.Send(string.Format("{0} - {1}", this.keyName, message), Encoding.Unicode);
+            this.sender.Send(string.Format("{0} - {1}", this.keyName, message), Encoding.Unicode);
         }
 
         public void Error(object message)

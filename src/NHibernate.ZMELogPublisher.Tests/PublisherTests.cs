@@ -29,7 +29,7 @@
 
         private Task subscriberTask;
 
-        private static int numberOfThreads = 1;
+        private static int numberOfThreads = 100;
 
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()
@@ -41,6 +41,7 @@
             this.timer = new Timer(x => this.stopSubscriber = true, null, 60000, Timeout.Infinite);
 
             Publisher.Start();
+
             var config = new Configuration();
             config.Configure("nh.sqlite.config");
             config.SessionFactoryName("Test session factory");
@@ -55,8 +56,7 @@
         public void RunAfterAllTests()
         {
             sessionFactory.Dispose();
-            this.subscriberTask.Dispose();
-            this.timer.Dispose();
+            timer.Dispose();
             Publisher.Shutdown();
         }
 
@@ -104,6 +104,7 @@
                 while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == numberOfThreads))
                 {
                     message = subscriber.Recv(Encoding.Unicode);
+                    Console.WriteLine(message);
                     this.recievedMessages.Add(message);
                 }
             }
