@@ -37,8 +37,7 @@ namespace NHibernate.ZMQLogPublisher
                 {
                     Exception = exception, 
                     Message = message, 
-                    LoggerKey = this.keyName,
-                    StackTrace = Environment.StackTrace
+                    LoggerKey = this.keyName
                 };
 
             string serializedLogDetails = JsonSerializer.SerializeToString(logDetails);
