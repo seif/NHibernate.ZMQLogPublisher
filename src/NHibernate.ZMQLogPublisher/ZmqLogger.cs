@@ -4,6 +4,8 @@ namespace NHibernate.ZMQLogPublisher
     using System.Diagnostics;
     using System.Text;
 
+    using ServiceStack.Text;
+
     using ZMQ;
 
     using Exception = System.Exception;
@@ -26,7 +28,21 @@ namespace NHibernate.ZMQLogPublisher
 
         private void Publish(string message)
         {
-            this.sender.Send(string.Format("{0} - {1}", this.keyName, message), Encoding.Unicode);
+            this.Publish(message, null);
+        }
+
+        private void Publish(string message, Exception exception)
+        {
+            var logDetails = new LogDetails
+                {
+                    Exception = exception, 
+                    Message = message, 
+                    LoggerKey = this.keyName,
+                    StackTrace = Environment.StackTrace
+                };
+
+            string serializedLogDetails = JsonSerializer.SerializeToString(logDetails);
+            this.sender.Send(serializedLogDetails, Encoding.Unicode);
         }
 
         public void Error(object message)
@@ -36,12 +52,12 @@ namespace NHibernate.ZMQLogPublisher
 
         public void Error(object message, Exception exception)
         {
-            this.Publish(message.ToString());
+            this.Publish(message.ToString(), exception);
         }
 
         public void ErrorFormat(string format, params object[] args)
         {
-            throw new NotImplementedException();
+            this.Publish(string.Format(format, args));
         }
 
         public void Fatal(object message)
@@ -51,7 +67,7 @@ namespace NHibernate.ZMQLogPublisher
 
         public void Fatal(object message, Exception exception)
         {
-            this.Publish(message.ToString());
+            this.Publish(message.ToString(), exception);
         }
 
         public void Debug(object message)
@@ -61,7 +77,7 @@ namespace NHibernate.ZMQLogPublisher
 
         public void Debug(object message, Exception exception)
         {
-            this.Publish(message.ToString());
+            this.Publish(message.ToString(), exception);
         }
 
         public void DebugFormat(string format, params object[] args)
@@ -76,7 +92,7 @@ namespace NHibernate.ZMQLogPublisher
 
         public void Info(object message, Exception exception)
         {
-            this.Publish(message.ToString());
+            this.Publish(message.ToString(), exception);
         }
 
         public void InfoFormat(string format, params object[] args)
@@ -91,7 +107,7 @@ namespace NHibernate.ZMQLogPublisher
 
         public void Warn(object message, Exception exception)
         {
-            this.Publish(message.ToString());
+            this.Publish(message.ToString(), exception);
         }
 
         public void WarnFormat(string format, params object[] args)
