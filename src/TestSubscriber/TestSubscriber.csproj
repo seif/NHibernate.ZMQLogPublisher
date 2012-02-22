@@ -42,6 +42,9 @@
     <Reference Include="clrzmq-ext">
       <HintPath>..\packages\clrzmq.2.2.2\lib\clrzmq-ext.dll</HintPath>
     </Reference>
+    <Reference Include="ServiceStack.Text">
+      <HintPath>..\packages\ServiceStack.Text.3.5.3\lib\net35\ServiceStack.Text.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -61,6 +64,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NHibernate.ZMQLogPublisher\NHibernate.ZMQLogPublisher.csproj">
+      <Project>{597BCF5D-5FA2-4BE1-BB2E-42F78C91DE8C}</Project>
+      <Name>NHibernate.ZMQLogPublisher</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
