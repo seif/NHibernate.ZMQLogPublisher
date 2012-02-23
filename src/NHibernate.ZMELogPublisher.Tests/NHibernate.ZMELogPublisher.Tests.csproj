@@ -67,6 +67,9 @@
     <Compile Include="TestData\Animals.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="nh.sqlserver.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="nh.sqlite.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

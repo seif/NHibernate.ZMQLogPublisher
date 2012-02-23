@@ -43,7 +43,7 @@
             Publisher.Start();
 
             var config = new Configuration();
-            config.Configure("nh.sqlite.config");
+            config.Configure("nh.sqlserver.config");
             config.SessionFactoryName("Test session factory");
             config.AddAssembly(this.GetType().Assembly);
 
@@ -70,7 +70,7 @@
             }
 
             Task.WaitAll(tasks);
-            
+
             this.stopSubscriber = true;
 
             this.subscriberTask.Wait(); // wait until subscriber finished
@@ -81,13 +81,34 @@
         private Task OpenSessionAndSaveAnObject(int i)
         {
             return Task.Factory.StartNew(() =>
+            {
+                using (var session = this.sessionFactory.OpenSession())
                 {
-                    using (var session = this.sessionFactory.OpenSession())
+                    using (var tx = session.BeginTransaction())
                     {
-                        session.Save(
-                            new Dog { BirthDate = DateTime.Now, BodyWeight = i, Description = "Some dog" + i, SerialNumber = "98765" });
+                        var dog = new Dog
+                        {
+                            BirthDate = DateTime.Now.AddYears(-1),
+                            BodyWeight = i,
+                            Description = "Some dog" + i,
+                            SerialNumber = "98765"
+                        };
+                        var puppy = new Dog
+                        {
+                            BirthDate = DateTime.Now,
+                            BodyWeight = i,
+                            Description = "Some pup" + i,
+                            SerialNumber = "9875"
+                        };
+                        dog.Children = new List<Animal>();
+                        dog.Children.Add(puppy);
+                        puppy.Mother = dog;
+                        session.Save(dog);
+
+                        tx.Commit();
                     }
-                });
+                }
+            });
         }
 
         private void StartSubscriber()

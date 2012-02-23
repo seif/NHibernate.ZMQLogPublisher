@@ -16,12 +16,11 @@ namespace TestSubscriber
 
     class Program
     {
-        public static IDictionary<string, List<string>> MessagesPerLogger  = new Dictionary<string, List<string>>();
-
-
 
         static void Main(string[] args)
         {
+            IDictionary<string, List<string>> MessagesPerLogger  = new Dictionary<string, List<string>>();
+            
             using(Context context = new Context(1))
             using (Socket subscriber = context.Socket(SocketType.SUB))
             {
@@ -29,6 +28,8 @@ namespace TestSubscriber
                 subscriber.Subscribe("", Encoding.Unicode);
 
                 string message = "";
+
+                MessagesPerLogger.Add("ALL MESSAGES AS RECIEVED", new List<string>());
 
                 while (!message.Contains("unbinding factory"))
                 {
@@ -41,6 +42,7 @@ namespace TestSubscriber
                     }
 
                     MessagesPerLogger[logDetails.LoggerKey].Add(logDetails.Message);
+                    MessagesPerLogger["ALL MESSAGES AS RECIEVED"].Add(string.Format("{{{0}}} - {1}", logDetails.LoggerKey, logDetails.Message));
                     Console.WriteLine(logDetails.Message);
                 }
 
