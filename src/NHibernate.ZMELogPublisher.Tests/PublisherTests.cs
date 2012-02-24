@@ -29,19 +29,9 @@
 
         private Task subscriberTask;
 
-        private static int numberOfThreads = 10;
-
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()
         {
-
-            this.subscriberTask = new Task(this.StartSubscriber);
-            this.subscriberTask.Start(); // start subscriber to listen to messages
-
-            this.timer = new Timer(x => this.stopSubscriber = true, null, 60000, Timeout.Infinite);
-
-            Publisher.Start();
-
             var config = new Configuration();
             config.Configure("nh.sqlserver.config");
             config.SessionFactoryName("Test session factory");
@@ -50,83 +40,108 @@
             new SchemaExport(config).Create(true, true);
 
             sessionFactory = config.BuildSessionFactory();
+
+            timer = new Timer(x => stopSubscriber = true, null, 5000, Timeout.Infinite);
         }
 
         [TestFixtureTearDown]
         public void RunAfterAllTests()
         {
             sessionFactory.Dispose();
-            timer.Dispose();
-            Publisher.Shutdown();
         }
 
+        [SetUp]
+        public void RunBeforeEachTest()
+        {
+            subscriberTask = new Task(this.StartSubscriber);
+            subscriberTask.Start(); // start subscriber to listen to messages
+
+            timer.Change(5000, Timeout.Infinite);
+        }
+        
         [Test]
         public void OpeningSessionPublishesEvent()
         {
-            Task[] tasks = new Task[numberOfThreads];
-            for (int i = 0; i < numberOfThreads; i++)
-            {
-                tasks[i] = this.OpenSessionAndSaveAnObject(i);
-            }
+            Publisher.Start();
 
-            Task.WaitAll(tasks);
-
-            this.stopSubscriber = true;
-
+            this.OpenSessionAndSaveDogWithChild();
+            
             this.subscriberTask.Wait(); // wait until subscriber finished
 
-            Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), numberOfThreads, "Did not recieve session opened message for all sessions.");
+            Publisher.Shutdown();
+
+            Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), 1, "Did not recieve session opened message for all sessions.");
         }
 
-        private Task OpenSessionAndSaveAnObject(int i)
+        [Test]
+        public void UsingNHibernateAfterShutingPublisherDownShouldNotThrow()
         {
-            return Task.Factory.StartNew(() =>
-            {
-                using (var session = this.sessionFactory.OpenSession())
-                {
-                    using (var tx = session.BeginTransaction())
-                    {
-                        var dog = new Dog
-                        {
-                            BirthDate = DateTime.Now.AddYears(-1),
-                            BodyWeight = i,
-                            Description = "Some dog" + i,
-                            SerialNumber = "98765"
-                        };
-                        var puppy = new Dog
-                        {
-                            BirthDate = DateTime.Now,
-                            BodyWeight = i,
-                            Description = "Some pup" + i,
-                            SerialNumber = "9875"
-                        };
-                        dog.Children = new List<Animal>();
-                        dog.Children.Add(puppy);
-                        puppy.Mother = dog;
-                        session.Save(dog);
+            OpenSessionAndSaveDogWithChild();
 
-                        tx.Commit();
-                    }
+            Publisher.Start();
+            Publisher.Shutdown();
+
+            OpenSessionAndSaveDogWithChild();
+            OpenSessionAndSave(
+                new Lizard() { SerialNumber = "11111", Description = "Saving lizard to get a new logger requested" });
+        }
+
+        private void OpenSessionAndSaveDogWithChild()
+        {
+            var dog = new Dog
+            {
+                BirthDate = DateTime.Now.AddYears(-1),
+                BodyWeight = 10,
+                Description = "Some dog",
+                SerialNumber = "98765"
+            };
+            var puppy = new Dog
+            {
+                BirthDate = DateTime.Now,
+                BodyWeight = 2,
+                Description = "Some pup",
+                SerialNumber = "9875"
+            };
+            dog.Children = new List<Animal>();
+            dog.Children.Add(puppy);
+            puppy.Mother = dog;
+            OpenSessionAndSave(dog);
+        }
+
+        private void OpenSessionAndSave(Animal animal)
+        {
+            using (var session = this.sessionFactory.OpenSession())
+            {
+                using (var tx = session.BeginTransaction())
+                {
+                    session.Save(animal);
+
+                    tx.Commit();
                 }
-            });
+            }
         }
 
         private void StartSubscriber()
         {
             this.recievedMessages.Clear();
 
-            using (Socket subscriber = new Socket(SocketType.SUB))
+            using(var context = new Context(1))
+            using (Socket subscriber = context.Socket(SocketType.SUB))
             {
                 subscriber.Subscribe("", Encoding.Unicode);
+                subscriber.Linger = 0;
                 subscriber.Connect("tcp://localhost:5555");
 
                 string message = "";
 
-                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == numberOfThreads))
+                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == 1))
                 {
-                    message = subscriber.Recv(Encoding.Unicode);
-                    Console.WriteLine(message);
-                    this.recievedMessages.Add(message);
+                    message = subscriber.Recv(Encoding.Unicode, 10);
+                    if (message != null)
+                    {
+                        Console.WriteLine(message);
+                        this.recievedMessages.Add(message);
+                    }
                 }
             }
         }
