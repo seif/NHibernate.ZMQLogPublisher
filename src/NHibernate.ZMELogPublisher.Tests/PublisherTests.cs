@@ -16,6 +16,8 @@
 
     using ZMQ;
 
+    using Exception = System.Exception;
+
     [TestFixture]
     public class PublisherTests
     {
@@ -53,22 +55,19 @@
         [SetUp]
         public void RunBeforeEachTest()
         {
-            subscriberTask = new Task(this.StartSubscriber);
-            subscriberTask.Start(); // start subscriber to listen to messages
-
             timer.Change(5000, Timeout.Infinite);
         }
         
         [Test]
         public void OpeningSessionPublishesEvent()
         {
+            subscriberTask = new Task(this.StartSubscriber);
+            subscriberTask.Start(); // start subscriber to listen to messages
+
             Publisher.Start();
-
             this.OpenSessionAndSaveDogWithChild();
-            
-            this.subscriberTask.Wait(); // wait until subscriber finished
-
             Publisher.Shutdown();
+            this.subscriberTask.Wait(); // wait until subscriber finished
 
             Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), 1, "Did not recieve session opened message for all sessions.");
         }
@@ -76,14 +75,31 @@
         [Test]
         public void UsingNHibernateAfterShutingPublisherDownShouldNotThrow()
         {
-            OpenSessionAndSaveDogWithChild();
+            AssertNoExceptionThrown(() =>
+            {   
+                Publisher.Start();
+                OpenSessionAndSaveDogWithChild();
+                Publisher.Shutdown();
 
-            Publisher.Start();
-            Publisher.Shutdown();
+                OpenSessionAndSaveDogWithChild();
+                OpenSessionAndSave(
+                    new Lizard() { SerialNumber = "11111", Description = "Saving lizard to get a new logger requested" });
+            });
+        }
 
-            OpenSessionAndSaveDogWithChild();
-            OpenSessionAndSave(
-                new Lizard() { SerialNumber = "11111", Description = "Saving lizard to get a new logger requested" });
+        private void AssertNoExceptionThrown(Action action)
+        {
+            Exception exceptionThrown = null;
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                exceptionThrown = ex;
+            }
+
+            Assert.IsNull(exceptionThrown);
         }
 
         private void OpenSessionAndSaveDogWithChild()

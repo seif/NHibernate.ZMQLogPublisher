@@ -26,6 +26,7 @@
         public static void Shutdown()
         {
             running = false;
+            LoggerProvider.SetLoggersFactory(new NoLoggingLoggerFactory());
         }
 
         private static void ListenAndPublishLogMessages()
@@ -33,7 +34,10 @@
             using (Socket publisher = context.Socket(SocketType.PUB), loggers = context.Socket(SocketType.PULL))
             {
                 publisher.Bind("tcp://*:5555");
+                publisher.Linger = 0;
+
                 loggers.Bind("inproc://loggers");
+                loggers.Linger = 0;
 
                 while (running)
                 {
