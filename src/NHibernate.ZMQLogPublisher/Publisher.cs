@@ -15,10 +15,13 @@
 
         public static void Start()
         {
-            running = true;
             context = new Context(1);
             
             new Task(ListenAndPublishLogMessages).Start();
+
+            while(!running)
+            {
+            }
 
             LoggerProvider.SetLoggersFactory(new ZmqLoggerFactory(context));
         }
@@ -38,11 +41,12 @@
 
                 loggers.Bind("inproc://loggers");
                 loggers.Linger = 0;
-
+                running = true;
+                
                 while (running)
                 {
-                    var logMessage = loggers.Recv(Encoding.Unicode);
-
+                    var logMessage = loggers.Recv(Encoding.Unicode, timeout: 1000);
+                    if(logMessage != null)
                     publisher.Send(logMessage, Encoding.Unicode);
                 }
             }
