@@ -146,7 +146,7 @@
             {
                 subscriber.Subscribe("", Encoding.Unicode);
                 subscriber.Linger = 0;
-                subscriber.Connect("tcp://localhost:5555");
+                subscriber.Connect("tcp://localhost:68748");
 
                 string message = "";
 

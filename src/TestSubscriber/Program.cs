@@ -24,7 +24,7 @@ namespace TestSubscriber
             using(Context context = new Context(1))
             using (Socket subscriber = context.Socket(SocketType.SUB))
             {
-                subscriber.Connect("tcp://localhost:5555");
+                subscriber.Connect("tcp://localhost:68748");
                 subscriber.Subscribe("", Encoding.Unicode);
 
                 string message = "";
