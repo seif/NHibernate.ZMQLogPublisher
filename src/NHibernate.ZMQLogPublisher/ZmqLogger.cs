@@ -13,20 +13,15 @@ namespace NHibernate.ZMQLogPublisher
     public class ZmqLogger : IInternalLogger
     {
         private string keyName;
-        
-        private Socket sender;
+
+        private readonly Context context;
 
         private bool contextDisposed;
 
         public ZmqLogger(string keyName, Context context)
         {
             this.keyName = keyName;
-
-            this.sender = context.Socket(SocketType.PUSH);
-            this.sender.Linger = 0;
-
-            this.sender.Connect("inproc://loggers");
-            this.sender = this.sender;
+            this.context = context;
         }
 
         private void Publish(string message)
@@ -45,26 +40,36 @@ namespace NHibernate.ZMQLogPublisher
 
             string serializedLogDetails = JsonSerializer.SerializeToString(logDetails);
 
-            try
-            {
-                if (!this.contextDisposed)
-                {
-                    this.sender.Send(serializedLogDetails, Encoding.Unicode);
-                }
-            }
-            catch (ZMQ.Exception e)
-            {
-                // when publisher is shutdown, sockets throw exception
-                // with error ETERM. Can't find a cleaner way to check if
-                // context is disposed.
-                if (e.Errno == (int)ERRNOS.ETERM)
-                {
-                    this.contextDisposed = true;
-                    this.sender.Dispose();
-                    return;
-                }
 
-                throw;
+            if (Publisher.Running)
+            {
+                using (var sender = context.Socket(SocketType.PUSH))
+                {
+                    sender.Linger = 0;
+
+                    sender.Connect("inproc://loggers");
+
+
+                    try
+                    {
+                        if (!this.contextDisposed)
+                        {
+                            sender.Send(serializedLogDetails, Encoding.Unicode);
+                        }
+                    }
+                    catch (ZMQ.Exception e)
+                    {
+                        // when publisher is shutdown, sockets throw exception
+                        // with error ETERM. Can't find a cleaner way to check if
+                        // context is disposed.
+                        if (e.Errno == (int)ERRNOS.ETERM)
+                        {
+                            return;
+                        }
+
+                        throw;
+                    }
+                }
             }
         }
 

@@ -13,10 +13,20 @@
 
         private static bool running;
 
+        private static bool stopping;
+
+        public static bool Running
+        {
+            get
+            {
+                return running;
+            }
+        }
+
         public static void Start()
         {
             context = new Context(1);
-            
+
             new Task(ListenAndPublishLogMessages).Start();
 
             while(!running)
@@ -28,8 +38,12 @@
 
         public static void Shutdown()
         {
-            running = false;
+            stopping = true;
             LoggerProvider.SetLoggersFactory(new NoLoggingLoggerFactory());
+
+            while(running)
+            {
+            }
         }
 
         private static void ListenAndPublishLogMessages()
@@ -43,14 +57,16 @@
                 loggers.Linger = 0;
                 running = true;
                 
-                while (running)
+                while (running && !stopping)
                 {
                     var logMessage = loggers.Recv(Encoding.Unicode, timeout: 1000);
                     if(logMessage != null)
                     publisher.Send(logMessage, Encoding.Unicode);
                 }
+
             }
 
+            running = false;
             context.Dispose();
         }
     }
