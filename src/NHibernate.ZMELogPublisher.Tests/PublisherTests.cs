@@ -59,9 +59,34 @@
         }
         
         [Test]
+        public void OpeningMultipleSessionsInDifferentThreads()
+        {
+            int expectedSessions = 100;
+            subscriberTask = new Task(() => this.StartSubscriber(expectedSessions));
+            subscriberTask.Start(); // start subscriber to listen to messages
+
+            Publisher.Start();
+
+            
+            Task[] tasks = new Task[expectedSessions];
+            for (int i = 0; i < expectedSessions; i++)
+            {
+                tasks[i] = new Task(this.OpenSessionAndSaveDogWithChild);
+                tasks[i].Start();
+            }
+
+            Task.WaitAll(tasks);
+
+            Publisher.Shutdown();
+            this.subscriberTask.Wait(); // wait until subscriber finished
+
+            Assert.AreEqual(expectedSessions, this.recievedMessages.Count(m => m.Contains("opened session")), "Did not recieve session opened message for all sessions.");
+        }
+
+        [Test]
         public void OpeningSessionPublishesEvent()
         {
-            subscriberTask = new Task(this.StartSubscriber);
+            subscriberTask = new Task(() => this.StartSubscriber(1));
             subscriberTask.Start(); // start subscriber to listen to messages
 
             Publisher.Start();
@@ -69,7 +94,7 @@
             Publisher.Shutdown();
             this.subscriberTask.Wait(); // wait until subscriber finished
 
-            Assert.AreEqual(recievedMessages.Count(m => m.Contains("opened session")), 1, "Did not recieve session opened message for all sessions.");
+            Assert.AreEqual(1, this.recievedMessages.Count(m => m.Contains("opened session")), "Did not recieve session opened message for all sessions.");
         }
 
         [Test]
@@ -137,7 +162,7 @@
             }
         }
 
-        private void StartSubscriber()
+        private void StartSubscriber(int expectedSessions)
         {
             this.recievedMessages.Clear();
 
@@ -150,7 +175,7 @@
 
                 string message = "";
 
-                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == 1))
+                while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == expectedSessions))
                 {
                     message = subscriber.Recv(Encoding.Unicode, 10);
                     if (message != null)
