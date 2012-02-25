@@ -63,8 +63,10 @@
                 while (running && !stopping)
                 {
                     var logMessage = loggers.Recv(Encoding.Unicode, timeout: 1000);
-                    if(logMessage != null)
-                    publisher.Send(logMessage, Encoding.Unicode);
+                    if (logMessage != null)
+                    {
+                        publisher.Send(logMessage, Encoding.Unicode);
+                    }
                 }
             }
 

@@ -59,6 +59,7 @@
         }
         
         [Test]
+        [Ignore]
         public void OpeningMultipleSessionsInDifferentThreads()
         {
             int expectedSessions = 100;
@@ -67,7 +68,6 @@
 
             Publisher.Start();
 
-            
             Task[] tasks = new Task[expectedSessions];
             for (int i = 0; i < expectedSessions; i++)
             {
