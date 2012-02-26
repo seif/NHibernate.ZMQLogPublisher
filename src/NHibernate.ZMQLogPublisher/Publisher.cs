@@ -1,25 +1,20 @@
 ﻿namespace NHibernate.ZMQLogPublisher
 {
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using ZMQ;
 
     public class Publisher
     {
-        private static Context context;
+        private static SocketManager socketManager;
 
         private static bool running;
 
         private static bool stopping;
 
-        public static bool Running
-        {
-            get
-            {
-                return running;
-            }
-        }
+        private static Thread publisherThread;
 
         public static void Start()
         {
@@ -28,15 +23,16 @@
 
         public static void Start(int port)
         {
-            context = new Context(1);
+            socketManager = new SocketManager();
 
-            new Task(() => ListenAndPublishLogMessages(port)).Start();
+            publisherThread = new Thread(() => ListenAndPublishLogMessages(port));
+            publisherThread.Start();
 
             while(!running)
             {
             }
 
-            LoggerProvider.SetLoggersFactory(new ZmqLoggerFactory(context));
+            LoggerProvider.SetLoggersFactory(new ZmqLoggerFactory(socketManager));
         }
 
         public static void Shutdown()
@@ -51,7 +47,8 @@
 
         private static void ListenAndPublishLogMessages(int port)
         {
-            using (Socket publisher = context.Socket(SocketType.PUB), loggers = context.Socket(SocketType.PULL))
+            using (Socket publisher = socketManager.Context.Socket(SocketType.PUB),
+                loggers = socketManager.Context.Socket(SocketType.PULL))
             {
                 publisher.Bind(string.Format("tcp://*:{0}", port));
                 publisher.Linger = 0;
@@ -62,7 +59,7 @@
                 
                 while (running && !stopping)
                 {
-                    var logMessage = loggers.Recv(Encoding.Unicode, timeout: 1000);
+                    var logMessage = loggers.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
                     if (logMessage != null)
                     {
                         publisher.Send(logMessage, Encoding.Unicode);
@@ -71,7 +68,7 @@
             }
 
             running = false;
-            context.Dispose();
+            socketManager.Terminate();
         }
     }
 }

@@ -14,18 +14,18 @@ namespace NHibernate.ZMQLogPublisher
     {
         private string keyName;
 
-        private readonly Context context;
-
-        private bool contextDisposed;
+        private readonly SocketManager socketManager;
 
         private Socket sender;
 
-        public ZmqLogger(string keyName, Context context)
+        private object socketLock = new object();
+
+        public ZmqLogger(string keyName, SocketManager socketManager)
         {
             this.keyName = keyName;
-            this.context = context;
+            this.socketManager = socketManager;
 
-            this.sender = this.context.Socket(SocketType.PUSH);
+            this.sender = this.socketManager.CreateSocketForKey(keyName, SocketType.PUSH);
 
             this.sender.Linger = 0;
 
@@ -47,26 +47,15 @@ namespace NHibernate.ZMQLogPublisher
                 };
 
             string serializedLogDetails = logDetails.ToJson();
-            
-            try
+
+            lock (socketLock)
             {
-                if (!this.contextDisposed)
+                if (!this.socketManager.Terminated)
                 {
                     this.sender.Send(serializedLogDetails, Encoding.Unicode);
                 }
             }
-            catch (ZMQ.Exception e)
-            {
-                // when publisher is shutdown, sockets throw exception
-                // with error ETERM. Can't find a cleaner way to check if
-                // context is disposed.
-                if (e.Errno == (int)ERRNOS.ETERM)
-                {
-                    return;
-                }
-
-                throw;
-            }
+            
         }
 
         public void Error(object message)

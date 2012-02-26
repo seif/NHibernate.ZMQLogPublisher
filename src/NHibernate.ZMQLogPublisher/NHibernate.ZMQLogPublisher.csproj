@@ -60,6 +60,7 @@
     <Compile Include="LogDetails.cs" />
     <Compile Include="Publisher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SocketManager.cs" />
     <Compile Include="ZmqLogger.cs" />
     <Compile Include="ZmqLoggerFactory.cs" />
   </ItemGroup>
