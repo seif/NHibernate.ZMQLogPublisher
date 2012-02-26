@@ -59,10 +59,10 @@
                 
                 while (running && !stopping)
                 {
-                    var logMessage = loggers.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
+                    var logMessage = loggers.Recv(SendRecvOpt.NOBLOCK);
                     if (logMessage != null)
                     {
-                        publisher.Send(logMessage, Encoding.Unicode);
+                        publisher.Send(logMessage);
                     }
                 }
             }
