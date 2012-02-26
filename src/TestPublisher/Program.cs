@@ -21,8 +21,8 @@ namespace TestPublisher
 
             new SchemaExport(config).Create(true, true);
 
-
             Publisher.Start();
+
             using(var sessionFactory = config.BuildSessionFactory())
             {
                 using (var session = sessionFactory.OpenSession())
@@ -30,9 +30,7 @@ namespace TestPublisher
                     using (var tx = session.BeginTransaction())
                     {
                         session.Save(new Lizard() { SerialNumber = "11111", Description = "Saving lizard to get a new logger requested" });
-                        Publisher.Shutdown();
-
-                        Publisher.Start();
+                        
                         var dog = new Dog
                         {
                             BirthDate = DateTime.Now.AddYears(-1),
@@ -56,6 +54,7 @@ namespace TestPublisher
                 }
                 Console.ReadLine();
             }
+
             Publisher.Shutdown();
         }
     }
