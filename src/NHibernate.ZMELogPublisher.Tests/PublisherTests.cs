@@ -87,10 +87,11 @@
         [Test]
         public void OpeningSessionPublishesEvent()
         {
+            Publisher.Start();
+
             subscriberTask = new Task(() => this.StartSubscriber(1));
             subscriberTask.Start(); // start subscriber to listen to messages
 
-            Publisher.Start();
             this.OpenSessionAndSaveDogWithChild();
             Publisher.Shutdown();
             this.subscriberTask.Wait(); // wait until subscriber finished
