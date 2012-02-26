@@ -4,6 +4,8 @@ namespace NHibernate.ZMQLogPublisher
     using System.Diagnostics;
     using System.Text;
 
+    using NHibernate.Impl;
+
     using ServiceStack.Text;
 
     using ZMQ;
@@ -43,7 +45,8 @@ namespace NHibernate.ZMQLogPublisher
                 {
                     Exception = exception,
                     Message = message,
-                    LoggerKey = this.keyName
+                    LoggerKey = this.keyName,
+                    SessionId = SessionIdLoggingContext.SessionId
                 };
 
             string serializedLogDetails = logDetails.ToJson();

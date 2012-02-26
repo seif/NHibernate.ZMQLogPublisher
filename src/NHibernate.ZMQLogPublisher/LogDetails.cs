@@ -9,5 +9,7 @@ namespace NHibernate.ZMQLogPublisher
         public string Message { get; set; }
 
         public Exception Exception { get; set; }
+
+        public Guid? SessionId { get; set; }
     }
 }
