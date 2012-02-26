@@ -18,7 +18,7 @@ namespace TestPublisher
     {
         static void Main(string[] args)
         {
-
+            Console.WriteLine("Started publisher and inserting data.");
             Publisher.Start();
     
             var config = new Configuration();
@@ -26,7 +26,7 @@ namespace TestPublisher
             config.SessionFactoryName("Test session factory");
             config.AddAssembly(typeof(Dog).Assembly);
 
-            new SchemaExport(config).Create(true, true);
+            new SchemaUpdate(config).Execute(false, true);
             
             using(var sessionFactory = config.BuildSessionFactory())
             {
@@ -34,27 +34,24 @@ namespace TestPublisher
 
                 sw.Start();
                 InsertData(sessionFactory);
-                TimeSpan elapsedWithLogging = sw.Elapsed;
+                Console.WriteLine("Inserting data  with logging took: {0}", sw.Elapsed);
 
                 sw.Restart();
                 Publisher.Shutdown();
-                TimeSpan shutdownTime = sw.Elapsed;
+                Console.WriteLine("Publisher shutdown complete in {0}", sw.Elapsed);
 
+                Console.WriteLine("inserting data with publisher shutdown");
                 sw.Restart();
                 InsertData(sessionFactory);
-                TimeSpan elapsedWithoutLogging = sw.Elapsed;
-
-                Console.WriteLine("Inserting data  without logging took: {0}", elapsedWithoutLogging);
-                Console.WriteLine("Inserting data  with logging took: {0}", elapsedWithLogging);
-                Console.WriteLine("Shutdown complete in {0}, press any key to exit", shutdownTime);
+                Console.WriteLine("Inserting data  without logging took: {0}", sw.Elapsed);
             }
             Console.ReadLine();
         }
 
         private static void InsertData(ISessionFactory sessionFactory)
         {
-            Task[] tasks = new Task[1000];
-            for (int i = 0; i < 1000; i++)
+            Task[] tasks = new Task[100];
+            for (int i = 0; i < 100; i++)
             {
                 tasks[i] = new Task(
                     () =>

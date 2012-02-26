@@ -6,6 +6,7 @@ using System.Text;
 namespace TestSubscriber
 {
     using System.CodeDom.Compiler;
+    using System.Collections;
     using System.IO;
 
     using NHibernate.ZMQLogPublisher;
@@ -20,8 +21,10 @@ namespace TestSubscriber
         static void Main(string[] args)
         {
             IDictionary<string, List<string>> MessagesPerLogger  = new Dictionary<string, List<string>>();
+            IDictionary<string, List<string>> sessions = new Dictionary<string, List<string>>();
 
-            Console.WriteLine("Subscriber started, press ENTER to start logging, while logging ESCAPE to stop");
+            Console.WriteLine("Subscriber started, press ENTER then start the publisher to start logging.");
+            Console.WriteLine("While logging press ESCAPE to stop.");
             Console.ReadLine();
 
             using(Context context = new Context(1))
@@ -54,6 +57,18 @@ namespace TestSubscriber
                                 sessionCount++;
                             }
 
+                            if(logDetails.SessionId.HasValue && logDetails.LoggerKey == "NHibernate.SQL")
+                            {
+                                string sessionId = logDetails.SessionId.Value.ToString();
+
+                                if (!sessions.ContainsKey(sessionId))
+                                {
+                                    sessions.Add(sessionId, new List<string>());
+                                }
+
+                                sessions[sessionId].Add(logDetails.Message);
+                            }
+
                             MessagesPerLogger[logDetails.LoggerKey].Add(logDetails.Message);
                             MessagesPerLogger["ALL MESSAGES AS RECIEVED"].Add(
                                 string.Format("{{{0}}} - {1}", logDetails.LoggerKey, logDetails.Message));
@@ -63,23 +78,33 @@ namespace TestSubscriber
                 }
                 while (Console.ReadKey(true).Key != ConsoleKey.Escape);
 
-                IndentedTextWriter writer = new IndentedTextWriter(new StringWriter());
-                foreach (var logger in MessagesPerLogger.Keys)
-                {
-                    writer.WriteLine(logger);
-                    writer.Indent++;
-                    foreach (var logMessage in MessagesPerLogger[logger])
-                    {
-                        writer.WriteLine(logMessage);
-                    }
+                WriteTabbedTextToFile(MessagesPerLogger, "loggers.txt");
+                WriteTabbedTextToFile(sessions, "sessions.txt");
 
-                    writer.Indent--;
-                    writer.WriteLine();
-                }
                 Console.WriteLine("{0} session opened messages were recieved.", sessionCount);
-                File.WriteAllText("loggers.txt", writer.InnerWriter.ToString());
+                Console.WriteLine("Press enter to exit");
+                
                 Console.ReadLine();
             }
+        }
+
+        private static void WriteTabbedTextToFile(IDictionary<string, List<string>> values, string fileToWriteTo)
+        {
+            IndentedTextWriter writer = new IndentedTextWriter(new StringWriter());
+            foreach (var key in values.Keys)
+            {
+                writer.WriteLine(key);
+                writer.Indent++;
+                foreach (var message in values[key])
+                {
+                    writer.WriteLine(message);
+                }
+
+                writer.Indent--;
+                writer.WriteLine();
+            }
+
+            File.WriteAllText(fileToWriteTo, writer.InnerWriter.ToString());
         }
     }
 }
