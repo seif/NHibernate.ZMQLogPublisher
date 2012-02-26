@@ -43,19 +43,19 @@ namespace NHibernate.ZMQLogPublisher
         {
             var logDetails = new LogDetails
                 {
-                    Exception = exception,
+                    Exception = exception == null ? null : exception.Message,
                     Message = message,
                     LoggerKey = this.keyName,
                     SessionId = SessionIdLoggingContext.SessionId
                 };
 
-            string serializedLogDetails = logDetails.ToJson();
+            byte[] serializedLogDetails = ProtoBufSerializer<LogDetails>.Serialize(logDetails);
 
             lock (socketLock)
             {
                 if (!this.socketManager.Terminated)
                 {
-                    this.sender.Send(serializedLogDetails, Encoding.Unicode);
+                    this.sender.Send(serializedLogDetails);
                 }
             }
             

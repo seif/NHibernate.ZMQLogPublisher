@@ -65,7 +65,7 @@
             timer.Change(300000, Timeout.Infinite);
             Publisher.Start();
 
-            int expectedSessions = 100;
+            int expectedSessions = 10;
             subscriberTask = new Task(() => this.StartSubscriber(expectedSessions));
             subscriberTask.Start(); // start subscriber to listen to messages
 
@@ -178,14 +178,15 @@
                 subscriber.Linger = 0;
                 subscriber.Connect("tcp://localhost:68748");
 
-                string message = "";
+                byte[] message;
 
                 while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == expectedSessions))
                 {
-                    message = subscriber.Recv(Encoding.Unicode, 10);
+                    message = subscriber.Recv(SendRecvOpt.NOBLOCK);
                     if (message != null)
                     {
-                        this.recievedMessages.Add(message);
+
+                        this.recievedMessages.Add(ProtoBufSerializer<LogDetails>.Deserialize(message).Message);
                     }
                 }
             }

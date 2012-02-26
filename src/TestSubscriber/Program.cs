@@ -33,7 +33,7 @@ namespace TestSubscriber
                 subscriber.Connect("tcp://localhost:68748");
                 subscriber.Subscribe("", Encoding.Unicode);
 
-                string message = "";
+                byte[] message;
 
                 MessagesPerLogger.Add("ALL MESSAGES AS RECIEVED", new List<string>());
 
@@ -42,10 +42,12 @@ namespace TestSubscriber
                 {
                     while (!Console.KeyAvailable)
                     {
-                        message = subscriber.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
+                        message = subscriber.Recv(SendRecvOpt.NOBLOCK);
                         if (message != null)
                         {
-                            var logDetails = JsonSerializer.DeserializeFromString<LogDetails>(message);
+                            var logDetails = ProtoBufSerializer<LogDetails>.Deserialize(message);
+
+                            if(logDetails == null)continue;
 
                             if (!MessagesPerLogger.ContainsKey(logDetails.LoggerKey))
                             {
@@ -59,7 +61,7 @@ namespace TestSubscriber
 
                             if(logDetails.SessionId.HasValue && logDetails.LoggerKey == "NHibernate.SQL")
                             {
-                                string sessionId = logDetails.SessionId.Value.ToString();
+                                string sessionId = logDetails.SessionId.ToString();
 
                                 if (!sessions.ContainsKey(sessionId))
                                 {
