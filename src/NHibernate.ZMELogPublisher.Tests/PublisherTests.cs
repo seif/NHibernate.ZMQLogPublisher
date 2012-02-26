@@ -62,11 +62,12 @@
         [Ignore]
         public void OpeningMultipleSessionsInDifferentThreads()
         {
+
+            Publisher.Start();
+
             int expectedSessions = 100;
             subscriberTask = new Task(() => this.StartSubscriber(expectedSessions));
             subscriberTask.Start(); // start subscriber to listen to messages
-
-            Publisher.Start();
 
             Task[] tasks = new Task[expectedSessions];
             for (int i = 0; i < expectedSessions; i++)
@@ -159,6 +160,9 @@
 
                     tx.Commit();
                 }
+                var animals = session.QueryOver<Animal>().List();
+                var dogs = session.QueryOver<Dog>().List();
+                var lizards = session.QueryOver<Lizard>().List();
             }
         }
 
@@ -180,7 +184,6 @@
                     message = subscriber.Recv(Encoding.Unicode, 10);
                     if (message != null)
                     {
-                        Console.WriteLine(message);
                         this.recievedMessages.Add(message);
                     }
                 }
