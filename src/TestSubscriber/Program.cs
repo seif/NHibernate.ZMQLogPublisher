@@ -20,7 +20,10 @@ namespace TestSubscriber
         static void Main(string[] args)
         {
             IDictionary<string, List<string>> MessagesPerLogger  = new Dictionary<string, List<string>>();
-            
+
+            Console.WriteLine("Subscriber started, press ENTER to start logging, while logging ESCAPE to stop");
+            Console.ReadLine();
+
             using(Context context = new Context(1))
             using (Socket subscriber = context.Socket(SocketType.SUB))
             {
@@ -31,20 +34,34 @@ namespace TestSubscriber
 
                 MessagesPerLogger.Add("ALL MESSAGES AS RECIEVED", new List<string>());
 
-                while (!message.Contains("unbinding factory"))
+                int sessionCount = 0;
+                do
                 {
-                    message = subscriber.Recv(Encoding.Unicode);
-                    var logDetails = JsonSerializer.DeserializeFromString<LogDetails>(message);
-
-                    if(!MessagesPerLogger.ContainsKey(logDetails.LoggerKey))
+                    while (!Console.KeyAvailable)
                     {
-                        MessagesPerLogger.Add(logDetails.LoggerKey, new List<string>());
-                    }
+                        message = subscriber.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
+                        if (message != null)
+                        {
+                            var logDetails = JsonSerializer.DeserializeFromString<LogDetails>(message);
 
-                    MessagesPerLogger[logDetails.LoggerKey].Add(logDetails.Message);
-                    MessagesPerLogger["ALL MESSAGES AS RECIEVED"].Add(string.Format("{{{0}}} - {1}", logDetails.LoggerKey, logDetails.Message));
-                    Console.WriteLine(logDetails.Message);
+                            if (!MessagesPerLogger.ContainsKey(logDetails.LoggerKey))
+                            {
+                                MessagesPerLogger.Add(logDetails.LoggerKey, new List<string>());
+                            }
+
+                            if (logDetails.Message.Contains("opened session"))
+                            {
+                                sessionCount++;
+                            }
+
+                            MessagesPerLogger[logDetails.LoggerKey].Add(logDetails.Message);
+                            MessagesPerLogger["ALL MESSAGES AS RECIEVED"].Add(
+                                string.Format("{{{0}}} - {1}", logDetails.LoggerKey, logDetails.Message));
+                            Console.WriteLine(logDetails.Message);
+                        }
+                    }
                 }
+                while (Console.ReadKey(true).Key != ConsoleKey.Escape);
 
                 IndentedTextWriter writer = new IndentedTextWriter(new StringWriter());
                 foreach (var logger in MessagesPerLogger.Keys)
@@ -55,12 +72,13 @@ namespace TestSubscriber
                     {
                         writer.WriteLine(logMessage);
                     }
-                    
+
                     writer.Indent--;
                     writer.WriteLine();
                 }
-                
+                Console.WriteLine("{0} session opened messages were recieved.", sessionCount);
                 File.WriteAllText("loggers.txt", writer.InnerWriter.ToString());
+                Console.ReadLine();
             }
         }
     }
