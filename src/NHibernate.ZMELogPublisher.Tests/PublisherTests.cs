@@ -62,7 +62,7 @@
         [Ignore]
         public void OpeningMultipleSessionsInDifferentThreads()
         {
-
+            timer.Change(300000, Timeout.Infinite);
             Publisher.Start();
 
             int expectedSessions = 100;

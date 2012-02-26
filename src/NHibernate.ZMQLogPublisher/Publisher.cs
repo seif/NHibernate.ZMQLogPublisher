@@ -67,8 +67,8 @@
                 }
             }
 
-            running = false;
             socketManager.Terminate();
+            running = false;
         }
     }
 }
