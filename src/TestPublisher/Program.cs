@@ -5,6 +5,9 @@ using System.Text;
 
 namespace TestPublisher
 {
+    using System.Diagnostics;
+    using System.Threading.Tasks;
+
     using NHibernate.Cfg;
     using NHibernate.Tool.hbm2ddl;
     using NHibernate.ZMELogPublisher.Tests.TestData;
@@ -25,33 +28,46 @@ namespace TestPublisher
 
             using(var sessionFactory = config.BuildSessionFactory())
             {
-                using (var session = sessionFactory.OpenSession())
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                Task[] tasks = new Task[50];
+                for (int i = 0; i < 50; i++)
                 {
-                    using (var tx = session.BeginTransaction())
-                    {
-                        session.Save(new Lizard() { SerialNumber = "11111", Description = "Saving lizard to get a new logger requested" });
-                        
-                        var dog = new Dog
+                    tasks[i] = new Task(() =>
                         {
-                            BirthDate = DateTime.Now.AddYears(-1),
-                            BodyWeight = 10,
-                            Description = "Some dog",
-                            SerialNumber = "98765"
-                        };
-                        var puppy = new Dog
-                        {
-                            BirthDate = DateTime.Now,
-                            BodyWeight = 2,
-                            Description = "Some pup",
-                            SerialNumber = "9875"
-                        };
-                        dog.Children = new List<Animal>();
-                        dog.Children.Add(puppy);
-                        puppy.Mother = dog;
+                            using (var session = sessionFactory.OpenSession())
+                            {
+                                using (var tx = session.BeginTransaction())
+                                {
+                                    session.Save(new Lizard() { SerialNumber = "11111", Description = "Saving lizard to get a new logger requested" });
 
-                        tx.Commit();
-                    }
+                                    var dog = new Dog
+                                    {
+                                        BirthDate = DateTime.Now.AddYears(-1),
+                                        BodyWeight = 10,
+                                        Description = "Some dog",
+                                        SerialNumber = "98765"
+                                    };
+                                    var puppy = new Dog
+                                    {
+                                        BirthDate = DateTime.Now,
+                                        BodyWeight = 2,
+                                        Description = "Some pup",
+                                        SerialNumber = "9875"
+                                    };
+                                    dog.Children = new List<Animal>();
+                                    dog.Children.Add(puppy);
+                                    puppy.Mother = dog;
+
+                                    tx.Commit();
+                                }
+                            }
+                        });
+                    tasks[i].Start();
                 }
+
+                Task.WaitAll(tasks);
+                Console.WriteLine(sw.Elapsed);
                 Console.ReadLine();
             }
 
