@@ -44,4 +44,4 @@ If you just want to see it working, start the test publisher and test subscriber
 
 ##Licence##
 
-Code is released under the [new bsd licence](licence.txt)
+Code is released under the [new bsd licence](https://github.com/seif/NHibernate.ZMQLogPublisher/blob/master/licence.txt)
