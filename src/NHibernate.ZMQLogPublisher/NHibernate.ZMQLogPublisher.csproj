@@ -32,7 +32,17 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <ItemGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x86' ">
+    <Reference Include="clrzmq, Version=2.2.0.0, Culture=neutral, processorArchitecture=x86">
+      <HintPath>..\..\lib\clrzmq\x86\clrzmq.dll</HintPath>
+    </Reference>    
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x64' ">
+    <Reference Include="clrzmq, Version=2.2.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\lib\clrzmq\x64\clrzmq.dll</HintPath>
+    </Reference>
+  </ItemGroup>  
+  <ItemGroup>    
     <Reference Include="Iesi.Collections">
       <HintPath>..\packages\Iesi.Collections.3.2.0.4000\lib\Net35\Iesi.Collections.dll</HintPath>
     </Reference>

@@ -35,6 +35,16 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x86' ">
+    <Reference Include="clrzmq, Version=2.2.0.0, Culture=neutral, processorArchitecture=x86">
+      <HintPath>..\..\lib\clrzmq\x86\clrzmq.dll</HintPath>
+    </Reference>    
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x64' ">
+    <Reference Include="clrzmq, Version=2.2.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>..\..\lib\clrzmq\x64\clrzmq.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="ServiceStack.Text">
       <HintPath>..\packages\ServiceStack.Text.3.5.3\lib\net35\ServiceStack.Text.dll</HintPath>
