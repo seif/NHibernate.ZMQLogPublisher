@@ -35,7 +35,7 @@
         public void RunOnceBeforeAllTests()
         {
             var config = new Configuration();
-            config.Configure("nh.sqlserver.config");
+            config.Configure("nh.sqlite.config");
             config.SessionFactoryName("Test session factory");
             config.AddAssembly(this.GetType().Assembly);
 
