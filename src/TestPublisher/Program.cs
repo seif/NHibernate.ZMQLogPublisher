@@ -25,7 +25,7 @@ namespace TestPublisher
             config.SessionFactoryName("Test session factory");
             config.AddAssembly(typeof(Dog).Assembly);
 
-            new SchemaExport(config).Create(true, true);
+            new SchemaUpdate(config).Execute(false, true);
             
             using(var sessionFactory = config.BuildSessionFactory())
             {
