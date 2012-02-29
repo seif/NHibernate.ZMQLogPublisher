@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
+﻿
 namespace TestPublisher
 {
+    using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Threading.Tasks;
 
     using NHibernate;
     using NHibernate.Cfg;
     using NHibernate.Tool.hbm2ddl;
-    using NHibernate.ZMELogPublisher.Tests.TestData;
     using NHibernate.ZMQLogPublisher;
+
+    using TestPublisher.TestData;
 
     class Program
     {
