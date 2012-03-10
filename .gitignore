@@ -21,3 +21,5 @@ StyleCop.Cache
 [Pp]ackages
 *.DotSettings.user
 *.TeamCity.user
+src/CommonAssemblyInfo.cs
+_rltm*

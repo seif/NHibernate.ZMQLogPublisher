@@ -38,7 +38,7 @@
     <Reference Include="clrzmq, Version=2.2.0.0, Culture=neutral, processorArchitecture=x86">
       <HintPath>..\..\lib\clrzmq\x86\clrzmq.dll</HintPath>
     </Reference>
-	<Reference Include="System.Data.SQLite, Version=1.0.66.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=x86">
+    <Reference Include="System.Data.SQLite, Version=1.0.66.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=x86">
       <HintPath>..\..\lib\sqlite\x86\System.Data.SQLite.DLL</HintPath>
     </Reference>
   </ItemGroup>
@@ -46,7 +46,7 @@
     <Reference Include="clrzmq, Version=2.2.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>..\..\lib\clrzmq\x64\clrzmq.dll</HintPath>
     </Reference>
-	<Reference Include="System.Data.SQLite, Version=1.0.66.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=AMD64">
+    <Reference Include="System.Data.SQLite, Version=1.0.66.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=AMD64">
       <HintPath>..\..\lib\sqlite\x64\System.Data.SQLite.DLL</HintPath>
     </Reference>
   </ItemGroup>
@@ -61,7 +61,7 @@
       <HintPath>..\packages\NUnitLib.2.5.10.11092\lib\net\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Core" />    
+    <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -69,6 +69,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="PublisherTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestData\Animals.cs" />
@@ -93,11 +96,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-   <None Include="..\..\lib\clrzmq\$(Platform)\libzmq.dll">
-     <Link>libzmq.dll</Link>
-     <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-   </None>
- </ItemGroup>
+    <None Include="..\..\lib\clrzmq\$(Platform)\libzmq.dll">
+      <Link>libzmq.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
