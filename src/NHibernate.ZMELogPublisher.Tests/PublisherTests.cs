@@ -31,6 +31,8 @@
 
         private Task subscriberTask;
 
+        private bool subscriberStarted;
+
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()
         {
@@ -56,18 +58,17 @@
         public void RunBeforeEachTest()
         {
             timer.Change(5000, Timeout.Infinite);
+            subscriberStarted = false;
         }
         
         [Test]
-        [Ignore]
         public void OpeningMultipleSessionsInDifferentThreads()
         {
-            timer.Change(300000, Timeout.Infinite);
+            timer.Change(20000, Timeout.Infinite);
             Publisher.Start();
 
-            int expectedSessions = 100;
-            subscriberTask = new Task(() => this.StartSubscriber(expectedSessions));
-            subscriberTask.Start(); // start subscriber to listen to messages
+            int expectedSessions = 10;
+            this.StartSubscriberThread(expectedSessions);
 
             Task[] tasks = new Task[expectedSessions];
             for (int i = 0; i < expectedSessions; i++)
@@ -88,13 +89,13 @@
         public void OpeningSessionPublishesEvent()
         {
             Publisher.Start();
-
-            subscriberTask = new Task(() => this.StartSubscriber(1));
-            subscriberTask.Start(); // start subscriber to listen to messages
+            
+            this.StartSubscriberThread(1);
 
             this.OpenSessionAndSaveDogWithChild();
-            Publisher.Shutdown();
             this.subscriberTask.Wait(); // wait until subscriber finished
+
+            Publisher.Shutdown();
 
             Assert.AreEqual(1, this.recievedMessages.Count(m => m.Contains("opened session")), "Did not recieve session opened message for all sessions.");
         }
@@ -127,6 +128,16 @@
             }
 
             Assert.IsNull(exceptionThrown);
+        }
+
+        private void StartSubscriberThread(int expectedSessions)
+        {
+            this.subscriberTask = new Task(() => this.StartSubscriber(expectedSessions));
+            this.subscriberTask.Start(); // start subscriber to listen to messages
+
+            while (!this.subscriberStarted)
+            {
+            }
         }
 
         private void OpenSessionAndSaveDogWithChild()
@@ -177,6 +188,7 @@
                 subscriber.Subscribe("", Encoding.Unicode);
                 subscriber.Linger = 0;
                 subscriber.Connect("tcp://localhost:68748");
+                subscriberStarted = true;
 
                 string message = "";
 
