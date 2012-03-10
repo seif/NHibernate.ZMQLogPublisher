@@ -43,6 +43,8 @@
             while(running)
             {
             }
+
+            stopping = false;
         }
 
         private static void ListenAndPublishLogMessages(int port)
