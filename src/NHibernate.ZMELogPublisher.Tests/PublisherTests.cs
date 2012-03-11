@@ -196,7 +196,6 @@
                     message = subscriber.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
                     if (message != null)
                     {
-                        Console.WriteLine(message);
                         this.recievedMessages.Add(message);
                     }
                 }

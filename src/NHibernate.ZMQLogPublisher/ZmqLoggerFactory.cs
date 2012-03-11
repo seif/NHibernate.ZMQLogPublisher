@@ -6,7 +6,7 @@ namespace NHibernate.ZMQLogPublisher
     using ZMQ;
 
     public class ZmqLoggerFactory : ILoggerFactory
-    {   
+    {
         private readonly ConcurrentDictionary<string, ZmqLogger> loggers;
 
         private Context context;
@@ -34,9 +34,12 @@ namespace NHibernate.ZMQLogPublisher
             return this.loggers.GetOrAdd(
                 keyName,
                 key =>
+                {
+                    var logger = new ZmqLogger(keyName);
+                    if (Publisher.Running)
                     {
-                        var logger = new ZmqLogger(keyName);
-                    logger.InitializeSocket(this.context.Socket(SocketType.PUSH));
+                        logger.InitializeSocket(this.context.Socket(SocketType.PUSH));
+                    }
                     return logger;
                 });
         }

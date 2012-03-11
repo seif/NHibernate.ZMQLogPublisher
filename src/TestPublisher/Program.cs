@@ -17,7 +17,8 @@ namespace TestPublisher
     {
         static void Main(string[] args)
         {
-
+            Console.WriteLine("Press enter to start publishing");
+            Console.ReadLine();
             Publisher.Start();
     
             var config = new Configuration();
@@ -52,12 +53,44 @@ namespace TestPublisher
 
         private static void InsertData(ISessionFactory sessionFactory)
         {
-            Task[] tasks = new Task[1000];
-            for (int i = 0; i < 1000; i++)
+            Task[] tasks = new Task[50];
+            for (int i = 0; i < 50; i++)
             {
                 tasks[i] = new Task(
                     () =>
                         {
+                            using (var session = sessionFactory.OpenSession())
+                            {
+                                using (var tx = session.BeginTransaction())
+                                {
+                                    session.Save(
+                                        new Lizard()
+                                        {
+                                            SerialNumber = "11111",
+                                            Description = "Saving lizard to get a new logger requested"
+                                        });
+
+                                    var dog = new Dog
+                                    {
+                                        BirthDate = DateTime.Now.AddYears(-1),
+                                        BodyWeight = 10,
+                                        Description = "Some dog",
+                                        SerialNumber = "98765"
+                                    };
+                                    var puppy = new Dog
+                                    {
+                                        BirthDate = DateTime.Now,
+                                        BodyWeight = 2,
+                                        Description = "Some pup",
+                                        SerialNumber = "9875"
+                                    };
+                                    dog.Children = new List<Animal>();
+                                    dog.Children.Add(puppy);
+                                    puppy.Mother = dog;
+
+                                    tx.Commit();
+                                }
+                            }
                             using (var session = sessionFactory.OpenSession())
                             {
                                 using (var tx = session.BeginTransaction())
