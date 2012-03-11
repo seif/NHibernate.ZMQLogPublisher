@@ -13,23 +13,14 @@ namespace NHibernate.ZMQLogPublisher
     public class ZmqLogger : IInternalLogger
     {
         private string keyName;
-
-        private readonly SocketManager socketManager;
-
+        
         private Socket sender;
 
         private object socketLock = new object();
 
-        public ZmqLogger(string keyName, SocketManager socketManager)
+        public ZmqLogger(string keyName)
         {
             this.keyName = keyName;
-            this.socketManager = socketManager;
-
-            this.sender = this.socketManager.CreateSocketForKey(keyName, SocketType.PUSH);
-
-            this.sender.Linger = 0;
-
-            this.sender.Connect("inproc://loggers");
         }
 
         private void Publish(string message)
@@ -50,12 +41,11 @@ namespace NHibernate.ZMQLogPublisher
 
             lock (socketLock)
             {
-                if (!this.socketManager.Terminated)
+                if (Publisher.Running)
                 {
                     this.sender.Send(serializedLogDetails, Encoding.Unicode);
                 }
             }
-            
         }
 
         public void Error(object message)
@@ -165,6 +155,23 @@ namespace NHibernate.ZMQLogPublisher
             get
             {
                 return true;
+            }
+        }
+
+        public void InitializeSocket(Socket socket)
+        {
+            this.sender = socket;
+
+            this.sender.Linger = 0;
+
+            this.sender.Connect("inproc://loggers");
+        }
+
+        public void DisposeSocket()
+        {
+            lock (socketLock)
+            {
+                sender.Dispose();
             }
         }
     }

@@ -64,7 +64,6 @@
         [Test]
         public void OpeningMultipleSessionsInDifferentThreads()
         {
-            timer.Change(20000, Timeout.Infinite);
             Publisher.Start();
 
             int expectedSessions = 10;
@@ -194,9 +193,10 @@
 
                 while (!(this.stopSubscriber || recievedMessages.Count(m => m.Contains("opened session")) == expectedSessions))
                 {
-                    message = subscriber.Recv(Encoding.Unicode, 10);
+                    message = subscriber.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
                     if (message != null)
                     {
+                        Console.WriteLine(message);
                         this.recievedMessages.Add(message);
                     }
                 }

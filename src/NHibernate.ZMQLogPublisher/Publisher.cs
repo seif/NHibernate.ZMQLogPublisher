@@ -2,19 +2,20 @@
 {
     using System.Text;
     using System.Threading;
-    using System.Threading.Tasks;
-
+    
     using ZMQ;
 
     public class Publisher
     {
-        private static SocketManager socketManager;
-
-        private static bool running;
+        private static Context context;
 
         private static bool stopping;
 
         private static Thread publisherThread;
+
+        private static ZmqLoggerFactory zmqLoggerFactory;
+
+        public static bool Running { get; set; }
 
         public static void Start()
         {
@@ -23,16 +24,23 @@
 
         public static void Start(int port)
         {
-            socketManager = new SocketManager();
+            context = new Context(1);
 
             publisherThread = new Thread(() => ListenAndPublishLogMessages(port));
             publisherThread.Start();
 
-            while(!running)
+            while (!Running)
             {
             }
 
-            LoggerProvider.SetLoggersFactory(new ZmqLoggerFactory(socketManager));
+            if (zmqLoggerFactory == null)
+            {
+                zmqLoggerFactory = new ZmqLoggerFactory();
+            }
+
+            zmqLoggerFactory.Initialize(context);
+
+            LoggerProvider.SetLoggersFactory(zmqLoggerFactory);
         }
 
         public static void Shutdown()
@@ -40,7 +48,7 @@
             stopping = true;
             LoggerProvider.SetLoggersFactory(new NoLoggingLoggerFactory());
 
-            while(running)
+            while (Running)
             {
             }
 
@@ -49,17 +57,17 @@
 
         private static void ListenAndPublishLogMessages(int port)
         {
-            using (Socket publisher = socketManager.Context.Socket(SocketType.PUB),
-                loggers = socketManager.Context.Socket(SocketType.PULL))
+            using (Socket publisher = context.Socket(SocketType.PUB),
+                loggers = context.Socket(SocketType.PULL))
             {
                 publisher.Bind(string.Format("tcp://*:{0}", port));
                 publisher.Linger = 0;
 
                 loggers.Bind("inproc://loggers");
                 loggers.Linger = 0;
-                running = true;
+                Running = true;
                 
-                while (running && !stopping)
+                while (Running && !stopping)
                 {
                     var logMessage = loggers.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
                     if (logMessage != null)
@@ -69,8 +77,9 @@
                 }
             }
 
-            socketManager.Terminate();
-            running = false;
+            Running = false;
+            zmqLoggerFactory.DisposeSockets();
+            context.Dispose();   
         }
     }
 }
