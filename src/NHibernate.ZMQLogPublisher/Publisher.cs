@@ -7,7 +7,7 @@
 
     public class Publisher
     {
-        private static Context context;
+        private static Context context = new Context(1);
 
         private static bool stopping;
 
@@ -24,8 +24,6 @@
 
         public static void Start(int port)
         {
-            context = new Context(1);
-
             publisherThread = new Thread(() => ListenAndPublishLogMessages(port));
             publisherThread.Start();
 
@@ -78,7 +76,6 @@
 
             Running = false;
             zmqLoggerFactory.DisposeSockets();
-            context.Dispose();   
         }
     }
 }
