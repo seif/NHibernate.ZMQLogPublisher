@@ -46,8 +46,7 @@
         public static void Shutdown()
         {
             stopping = true;
-            LoggerProvider.SetLoggersFactory(new NoLoggingLoggerFactory());
-
+            
             while (Running)
             {
             }
