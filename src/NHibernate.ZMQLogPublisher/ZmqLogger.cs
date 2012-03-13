@@ -30,20 +30,23 @@ namespace NHibernate.ZMQLogPublisher
 
         private void Publish(string message, Exception exception)
         {
-            var logDetails = new LogDetails
+            if (Publisher.Running)
+            {
+                var logDetails = new LogDetails
                 {
                     Exception = exception,
                     Message = message,
                     LoggerKey = this.keyName
                 };
 
-            string serializedLogDetails = logDetails.ToJson();
+                string serializedLogDetails = logDetails.ToJson();
 
-            lock (socketLock)
-            {
-                if (Publisher.Running)
+                lock (socketLock)
                 {
-                    this.sender.Send(serializedLogDetails, Encoding.Unicode);
+                    if (Publisher.Running)
+                    {
+                        this.sender.Send(serializedLogDetails, Encoding.Unicode);
+                    }
                 }
             }
         }
