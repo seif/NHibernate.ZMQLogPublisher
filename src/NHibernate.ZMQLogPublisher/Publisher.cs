@@ -70,7 +70,7 @@
                 
                 while (Running && !stopping)
                 {
-                    Context.Poller(new List<Socket> { loggers, publisher });
+                    Context.Poller(new List<Socket> { loggers, publisher }, 1000);
                 }
             }
 
