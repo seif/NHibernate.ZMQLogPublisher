@@ -1,5 +1,6 @@
 ﻿namespace NHibernate.ZMQLogPublisher
 {
+    using System.Collections.Generic;
     using System.Text;
     using System.Threading;
     
@@ -62,15 +63,14 @@
 
                 loggers.Bind("inproc://loggers");
                 loggers.Linger = 0;
+
+                loggers.PollInHandler += (socket, revents) => publisher.Send(socket.Recv());
+
                 Running = true;
                 
                 while (Running && !stopping)
                 {
-                    var logMessage = loggers.Recv(Encoding.Unicode, SendRecvOpt.NOBLOCK);
-                    if (logMessage != null)
-                    {
-                        publisher.Send(logMessage, Encoding.Unicode);
-                    }
+                    Context.Poller(new List<Socket> { loggers, publisher });
                 }
             }
 
