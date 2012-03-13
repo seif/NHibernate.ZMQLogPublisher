@@ -1,7 +1,5 @@
 namespace NHibernate.ZMQLogPublisher
 {
-    using System;
-    using System.Diagnostics;
     using System.Text;
 
     using ServiceStack.Text;
@@ -13,33 +11,32 @@ namespace NHibernate.ZMQLogPublisher
     public class ZmqLogger : IInternalLogger
     {
         private string keyName;
-        
+
+        private readonly bool onlyPublishExceptions;
+
         private Socket sender;
 
         private object socketLock = new object();
 
-        public ZmqLogger(string keyName)
+        public ZmqLogger(string keyName, bool onlyPublishExceptions)
         {
             this.keyName = keyName;
+            this.onlyPublishExceptions = onlyPublishExceptions;
         }
 
-        private void Publish(string message)
+        private void SendMessageToPublisher(string message)
         {
-            this.Publish(message, null);
+            if (!this.onlyPublishExceptions)
+            {
+                this.SendMessageToPublisher(message, null);
+            }
         }
 
-        private void Publish(string message, Exception exception)
+        private void SendMessageToPublisher(string message, Exception exception)
         {
             if (Publisher.Running)
             {
-                var logDetails = new LogDetails
-                {
-                    Exception = exception,
-                    Message = message,
-                    LoggerKey = this.keyName
-                };
-
-                string serializedLogDetails = logDetails.ToJson();
+                var serializedLogDetails = this.GetSerializedLogDetails(message, exception);
 
                 lock (socketLock)
                 {
@@ -51,74 +48,82 @@ namespace NHibernate.ZMQLogPublisher
             }
         }
 
+        private string GetSerializedLogDetails(string message, Exception exception)
+        {
+            var logDetails = new LogDetails { Exception = exception, Message = message, LoggerKey = this.keyName };
+
+            string serializedLogDetails = logDetails.ToJson();
+            return serializedLogDetails;
+        }
+
         public void Error(object message)
         {
-            this.Publish(message.ToString());
+            this.SendMessageToPublisher(message.ToString());
         }
 
         public void Error(object message, Exception exception)
         {
-            this.Publish(message.ToString(), exception);
+            this.SendMessageToPublisher(message.ToString(), exception);
         }
 
         public void ErrorFormat(string format, params object[] args)
         {
-            this.Publish(string.Format(format, args));
+            this.SendMessageToPublisher(string.Format(format, args));
         }
 
         public void Fatal(object message)
         {
-            this.Publish(message.ToString());
+            this.SendMessageToPublisher(message.ToString());
         }
 
         public void Fatal(object message, Exception exception)
         {
-            this.Publish(message.ToString(), exception);
+            this.SendMessageToPublisher(message.ToString(), exception);
         }
 
         public void Debug(object message)
         {
-            this.Publish(message.ToString());
+            this.SendMessageToPublisher(message.ToString());
         }
 
         public void Debug(object message, Exception exception)
         {
-            this.Publish(message.ToString(), exception);
+            this.SendMessageToPublisher(message.ToString(), exception);
         }
 
         public void DebugFormat(string format, params object[] args)
         {
-            this.Publish(string.Format(format, args));
+            this.SendMessageToPublisher(string.Format(format, args));
         }
 
         public void Info(object message)
         {
-            this.Publish(message.ToString());
+            this.SendMessageToPublisher(message.ToString());
         }
 
         public void Info(object message, Exception exception)
         {
-            this.Publish(message.ToString(), exception);
+            this.SendMessageToPublisher(message.ToString(), exception);
         }
 
         public void InfoFormat(string format, params object[] args)
         {
-            this.Publish(string.Format(format, args));
+            this.SendMessageToPublisher(string.Format(format, args));
         }
 
         public void Warn(object message)
         {
-            this.Publish(message.ToString());
+            this.SendMessageToPublisher(message.ToString());
         }
 
         public void Warn(object message, Exception exception)
         {
-            this.Publish(message.ToString(), exception);
+            this.SendMessageToPublisher(message.ToString(), exception);
         }
 
         public void WarnFormat(string format, params object[] args)
         {
-            this.Publish(string.Format(format, args));
+            this.SendMessageToPublisher(string.Format(format, args));
         }
 
         public bool IsErrorEnabled

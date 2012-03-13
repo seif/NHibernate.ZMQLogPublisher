@@ -2,12 +2,21 @@ namespace NHibernate.ZMQLogPublisher
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Diagnostics;
 
     using ZMQ;
 
     public class ZmqLoggerFactory : ILoggerFactory
     {
         private readonly ConcurrentDictionary<string, ZmqLogger> loggers;
+
+        private readonly string[] loggersToPublish = new[]
+            {
+                "NHibernate.SQL",
+                "NHibernate.Impl.SessionImpl",
+                "NHibernate.Transaction.AdoTransaction",
+                "NHibernate.AdoNet.AbstractBatcher"
+            };
 
         private Context context;
 
@@ -35,7 +44,8 @@ namespace NHibernate.ZMQLogPublisher
                 keyName,
                 key =>
                 {
-                    var logger = new ZmqLogger(keyName);
+                    var logger = new ZmqLogger(keyName, Array.IndexOf(loggersToPublish, keyName) == 0);
+
                     if (Publisher.Running)
                     {
                         logger.InitializeSocket(this.context.Socket(SocketType.PUSH));
