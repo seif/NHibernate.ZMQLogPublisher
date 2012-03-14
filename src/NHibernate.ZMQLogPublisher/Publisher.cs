@@ -10,13 +10,21 @@
     {
         private static Context context = new Context(1);
 
-        private static bool stopping;
+        private static volatile bool stopping;
+
+        private static volatile bool running;
 
         private static Thread publisherThread;
 
         private static ZmqLoggerFactory zmqLoggerFactory;
 
-        public static bool Running { get; set; }
+        public static bool Running
+        {
+            get
+            {
+                return running;
+            }
+        }
 
         public static void Start()
         {
@@ -66,7 +74,7 @@
 
                 loggers.PollInHandler += (socket, revents) => publisher.Send(socket.Recv());
 
-                Running = true;
+                running = true;
                 
                 while (Running && !stopping)
                 {
@@ -74,7 +82,7 @@
                 }
             }
 
-            Running = false;
+            running = false;
             zmqLoggerFactory.DisposeSockets();
         }
     }
