@@ -182,12 +182,18 @@
             this.recievedMessages.Clear();
 
             using(var context = new Context(1))
-            using (Socket subscriber = context.Socket(SocketType.SUB))
+            using (Socket subscriber = context.Socket(SocketType.SUB),
+                syncClient = context.Socket(SocketType.REQ))
             {
                 subscriber.Subscribe("", Encoding.Unicode);
                 subscriber.Linger = 0;
                 subscriber.Connect("tcp://localhost:68748");
                 subscriberStarted = true;
+
+                syncClient.Connect("tcp://localhost:68747");
+
+                syncClient.Send("", Encoding.Unicode);
+                syncClient.Recv();
 
                 string message = "";
 

@@ -25,10 +25,16 @@ namespace TestSubscriber
             Console.ReadLine();
 
             using(Context context = new Context(1))
-            using (Socket subscriber = context.Socket(SocketType.SUB))
+            using (Socket subscriber = context.Socket(SocketType.SUB),
+                syncClient = context.Socket(SocketType.REQ))
             {
                 subscriber.Connect("tcp://localhost:68748");
                 subscriber.Subscribe("", Encoding.Unicode);
+
+                syncClient.Connect("tcp://localhost:68747");
+
+                syncClient.Send("", Encoding.Unicode);
+                syncClient.Recv();
 
                 string message = "";
 

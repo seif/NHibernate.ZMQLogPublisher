@@ -64,19 +64,37 @@
         private static void ListenAndPublishLogMessages(int port)
         {
             using (Socket publisher = context.Socket(SocketType.PUB),
-                loggers = context.Socket(SocketType.PULL))
+                loggers = context.Socket(SocketType.PULL),
+                syncService = context.Socket(SocketType.REP))
             {
                 publisher.Bind(string.Format("tcp://*:{0}", port));
+                publisher.HWM = 100000;
                 publisher.Linger = 0;
 
                 loggers.Bind("inproc://loggers");
                 loggers.Linger = 0;
 
+                syncService.Bind("tcp://*:68747");
+
                 loggers.PollInHandler += (socket, revents) => publisher.Send(socket.Recv());
 
                 running = true;
-                
-                while (Running && !stopping)
+
+                byte[] syncMessage = null;
+                // keep waiting for syncMessage before starting to publish
+                // unless we stop before we recieve the sync message
+                while (!stopping && syncMessage == null)
+                {
+                    syncMessage = syncService.Recv(SendRecvOpt.NOBLOCK);
+                }
+
+                // send sync confirmation if we recieved a sync request
+                if(syncMessage != null)
+                {
+                    syncService.Send("", Encoding.Unicode);
+                }
+
+                while (!stopping)
                 {
                     Context.Poller(new List<Socket> { loggers, publisher }, 1000);
                 }
