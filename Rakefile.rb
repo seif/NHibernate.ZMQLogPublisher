@@ -13,4 +13,12 @@ assemblyinfo :assemblyinfo => ["version:set_values"] do |asm|
   asm.output_file = 'src/CommonAssemblyInfo.cs'
 end
 
-task :default  => ["assemblyinfo"]
+desc "Run a sample build using the MSBuildTask"
+msbuild :msbuild do |msb|
+  msb.properties = { :configuration => "Release" , :platform => "x86", :outdir => File.join(File.dirname(__FILE__), "output/") }
+  msb.targets = [ :Clean, :Build ]
+  msb.solution = "src/NHibernate.ZMQLogPublisher.sln"
+  msb.log_level = :verbose
+end
+
+task :default  => ["assemblyinfo", "msbuild"]

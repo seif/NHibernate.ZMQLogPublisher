@@ -23,3 +23,4 @@ StyleCop.Cache
 *.TeamCity.user
 src/CommonAssemblyInfo.cs
 _rltm*
+output
