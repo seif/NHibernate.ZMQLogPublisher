@@ -8,100 +8,148 @@
 
     public class Publisher
     {
-        private static Context context = new Context(1);
+        private static Publisher instance;
 
-        private static volatile bool stopping;
+        private Configuration configuration;
 
-        private static volatile bool running;
+        private Context context;
 
-        private static Thread publisherThread;
+        private ManualResetEvent threadRunningEvent;
 
-        private static ZmqLoggerFactory zmqLoggerFactory;
+        private ManualResetEvent threadStoppedEvent;
 
-        public static bool Running
+        private bool stopping;
+
+        private bool running;
+
+        private Thread publisherThread;
+
+        private ZmqLoggerFactory zmqLoggerFactory;
+
+
+        public static Publisher Instance
         {
             get
             {
-                return running;
+                return instance;
             }
+        }
+
+        public bool Running
+        {
+            get
+            {
+                return this.running;
+            }
+        }
+
+        public Publisher(Configuration configuration)
+            :this(configuration, new Context(1))
+        {
+        }
+
+        public Publisher(Configuration configuration, Context context)
+        {
+            this.context = context;
+            this.configuration = configuration;
+            this.zmqLoggerFactory = new ZmqLoggerFactory(configuration.LoggersToPublish.ToArray());
+            
+            this.threadRunningEvent = new ManualResetEvent(false);
+            this.threadStoppedEvent = new ManualResetEvent(false);
         }
 
         public static void Start()
         {
-            Start(68748);
+            Start(new Publisher(Configuration.LoadDefault()));
         }
 
-        public static void Start(int port)
-        {
-            publisherThread = new Thread(() => ListenAndPublishLogMessages(port));
-            publisherThread.Start();
-
-            while (!Running)
-            {
-            }
-
-            if (zmqLoggerFactory == null)
-            {
-                zmqLoggerFactory = new ZmqLoggerFactory();
-            }
-
-            zmqLoggerFactory.Initialize(context);
-
-            LoggerProvider.SetLoggersFactory(zmqLoggerFactory);
+        public static void Start(Publisher configuredInstance)
+        {   
+            instance = configuredInstance;
+            instance.StartPublisherThread();
+            instance.AssociateWithNHibernate();
         }
 
-        public static void Shutdown()
+        public static void Stop()
         {
-            stopping = true;
+            instance.Shutdown();
+        }
+
+        public void Shutdown()
+        {
+            this.stopping = true;
+            this.running = false;
             
-            while (Running)
-            {
-            }
-
-            stopping = false;
+            this.threadStoppedEvent.WaitOne();
+            this.stopping = false;
         }
 
-        private static void ListenAndPublishLogMessages(int port)
+        public void StartPublisherThread()
         {
-            using (Socket publisher = context.Socket(SocketType.PUB),
-                loggers = context.Socket(SocketType.PULL),
-                syncService = context.Socket(SocketType.REP))
+            this.publisherThread = new Thread(() => this.ListenAndPublishLogMessages());
+            this.publisherThread.Start();
+
+            this.threadRunningEvent.WaitOne(5000);
+            this.running = true;
+        }
+
+        private void AssociateWithNHibernate()
+        {
+            this.zmqLoggerFactory.Initialize(this.context);
+
+            LoggerProvider.SetLoggersFactory(this.zmqLoggerFactory);
+        }
+
+
+        private void ListenAndPublishLogMessages()
+        {
+            using (Socket publisher = this.context.Socket(SocketType.PUB),
+                loggersSink = this.context.Socket(SocketType.PULL),
+                syncSocket = this.context.Socket(SocketType.REP))
             {
-                publisher.Bind(string.Format("tcp://*:{0}", port));
-                publisher.HWM = 100000;
-                publisher.Linger = 0;
+                this.ConfigureSocket(publisher, this.configuration.PublisherSocketConfig);
+                this.ConfigureSocket(syncSocket, this.configuration.SyncSocketConfig);
+                
+                this.StartLoggersSink(loggersSink);
+                loggersSink.PollInHandler += (socket, revents) => publisher.Send(socket.Recv());
 
-                loggers.Bind("inproc://loggers");
-                loggers.Linger = 0;
-
-                syncService.Bind("tcp://*:68747");
-
-                loggers.PollInHandler += (socket, revents) => publisher.Send(socket.Recv());
-
-                running = true;
+                this.threadRunningEvent.Set();
 
                 byte[] syncMessage = null;
                 // keep waiting for syncMessage before starting to publish
                 // unless we stop before we recieve the sync message
-                while (!stopping && syncMessage == null)
+                while (!this.stopping && syncMessage == null)
                 {
-                    syncMessage = syncService.Recv(SendRecvOpt.NOBLOCK);
+                    syncMessage = syncSocket.Recv(SendRecvOpt.NOBLOCK);
                 }
 
                 // send sync confirmation if we recieved a sync request
                 if(syncMessage != null)
                 {
-                    syncService.Send("", Encoding.Unicode);
+                    syncSocket.Send(string.Empty, Encoding.Unicode);
                 }
 
-                while (!stopping)
+                while (!this.stopping)
                 {
-                    Context.Poller(new List<Socket> { loggers, publisher }, 1000);
+                    Context.Poller(new List<Socket> { loggersSink, publisher }, 2000);
                 }
             }
 
-            running = false;
-            zmqLoggerFactory.DisposeSockets();
+            this.threadStoppedEvent.Set();
+            this.zmqLoggerFactory.StopSockets();
+        }
+
+        private void StartLoggersSink(Socket loggers)
+        {
+            loggers.Linger = 0;
+            loggers.Bind(Transport.INPROC, "loggers");
+        }
+
+        private void ConfigureSocket(Socket socket, SocketConfiguration socketConfig)
+        {
+            socket.Bind(socketConfig.Address);
+            socket.HWM = socketConfig.HighWaterMark;
+            socket.Linger = socketConfig.Linger;
         }
     }
 }

@@ -18,42 +18,50 @@ namespace NHibernate.ZMQLogPublisher
 
         private object socketLock = new object();
 
+        public bool IsErrorEnabled
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        public bool IsFatalEnabled
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        public bool IsDebugEnabled
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        public bool IsInfoEnabled
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        public bool IsWarnEnabled
+        {
+            get
+            {
+                return true;
+            }
+        }
+
         public ZmqLogger(string keyName, bool onlyPublishExceptions)
         {
             this.keyName = keyName;
             this.onlyPublishExceptions = onlyPublishExceptions;
-        }
-
-        private void SendMessageToPublisher(string message)
-        {
-            if (!this.onlyPublishExceptions)
-            {
-                this.SendMessageToPublisher(message, null);
-            }
-        }
-
-        private void SendMessageToPublisher(string message, Exception exception)
-        {
-            if (Publisher.Running)
-            {
-                var serializedLogDetails = this.GetSerializedLogDetails(message, exception);
-
-                lock (socketLock)
-                {
-                    if (Publisher.Running)
-                    {
-                        this.sender.Send(serializedLogDetails, Encoding.Unicode);
-                    }
-                }
-            }
-        }
-
-        private string GetSerializedLogDetails(string message, Exception exception)
-        {
-            var logDetails = new LogDetails { Exception = exception, Message = message, LoggerKey = this.keyName };
-
-            string serializedLogDetails = logDetails.ToJson();
-            return serializedLogDetails;
         }
 
         public void Error(object message)
@@ -126,47 +134,7 @@ namespace NHibernate.ZMQLogPublisher
             this.SendMessageToPublisher(string.Format(format, args));
         }
 
-        public bool IsErrorEnabled
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public bool IsFatalEnabled
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public bool IsDebugEnabled
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public bool IsInfoEnabled
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public bool IsWarnEnabled
-        {
-            get
-            {
-                return true;
-            }
-        }
-
-        public void InitializeSocket(Socket socket)
+        public void InitializeWithSocket(Socket socket)
         {
             this.sender = socket;
 
@@ -175,12 +143,45 @@ namespace NHibernate.ZMQLogPublisher
             this.sender.Connect("inproc://loggers");
         }
 
-        public void DisposeSocket()
+        public void StopSocket()
         {
             lock (socketLock)
             {
                 sender.Dispose();
             }
         }
+
+        private void SendMessageToPublisher(string message)
+        {
+            if (!this.onlyPublishExceptions)
+            {
+                this.SendMessageToPublisher(message, null);
+            }
+        }
+
+        private void SendMessageToPublisher(string message, Exception exception)
+        {
+            if (Publisher.Instance.Running)
+            {
+                var serializedLogDetails = this.GetSerializedLogDetails(message, exception);
+
+                lock (this.socketLock)
+                {
+                    if (Publisher.Instance.Running)
+                    {
+                        this.sender.Send(serializedLogDetails, Encoding.Unicode);
+                    }
+                }
+            }
+        }
+
+        private string GetSerializedLogDetails(string message, Exception exception)
+        {
+            var logDetails = new LogDetails { Exception = exception, Message = message, LoggerKey = this.keyName };
+
+            string serializedLogDetails = logDetails.ToJson();
+            return serializedLogDetails;
+        }
+
     }
 }

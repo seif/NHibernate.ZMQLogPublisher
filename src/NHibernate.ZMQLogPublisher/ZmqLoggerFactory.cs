@@ -10,19 +10,14 @@ namespace NHibernate.ZMQLogPublisher
     {
         private readonly ConcurrentDictionary<string, ZmqLogger> loggers;
 
-        private readonly string[] loggersToPublish = new[]
-            {
-                "NHibernate.SQL",
-                "NHibernate.Impl.SessionImpl",
-                "NHibernate.Transaction.AdoTransaction",
-                "NHibernate.AdoNet.AbstractBatcher"
-            };
+        private readonly string[] loggersToPublish;
 
         private Context context;
 
-        public ZmqLoggerFactory()
+        public ZmqLoggerFactory(string[] loggersToPublish)
         {
             this.loggers = new ConcurrentDictionary<string, ZmqLogger>();
+            this.loggersToPublish = loggersToPublish;
         }
 
         public void Initialize(Context ctx)
@@ -33,7 +28,7 @@ namespace NHibernate.ZMQLogPublisher
             {
                 lock (logger)
                 {
-                    logger.InitializeSocket(this.context.Socket(SocketType.PUSH));
+                    logger.InitializeWithSocket(this.context.Socket(SocketType.PUSH));
                 }
             }
         }
@@ -46,9 +41,9 @@ namespace NHibernate.ZMQLogPublisher
                 {
                     var logger = new ZmqLogger(keyName, Array.IndexOf(loggersToPublish, keyName) == 0);
 
-                    if (Publisher.Running)
+                    if (Publisher.Instance.Running)
                     {
-                        logger.InitializeSocket(this.context.Socket(SocketType.PUSH));
+                        logger.InitializeWithSocket(this.context.Socket(SocketType.PUSH));
                     }
                     return logger;
                 });
@@ -59,12 +54,12 @@ namespace NHibernate.ZMQLogPublisher
             return this.LoggerFor(type.FullName);
         }
 
-        public void DisposeSockets()
+        public void StopSockets()
         {
             foreach (var kvp in this.loggers)
             {
                 ZmqLogger logger = kvp.Value;
-                logger.DisposeSocket();
+                logger.StopSocket();
             }
         }
     }

@@ -16,6 +16,7 @@
 
     using ZMQ;
 
+    using Configuration = NHibernate.ZMQLogPublisher.Configuration;
     using Exception = System.Exception;
 
     [TestFixture]
@@ -31,12 +32,12 @@
 
         private Task subscriberTask;
 
-        private bool subscriberStarted;
+        private readonly ManualResetEvent subscriberReadyEvent= new ManualResetEvent(false);
 
         [TestFixtureSetUp]
         public void RunOnceBeforeAllTests()
         {
-            var config = new Configuration();
+            var config = new NHibernate.Cfg.Configuration();
             config.Configure("nh.sqlite.config");
             config.SessionFactoryName("Test session factory");
             config.AddAssembly(this.GetType().Assembly);
@@ -58,9 +59,33 @@
         public void RunBeforeEachTest()
         {
             timer.Change(5000, Timeout.Infinite);
-            subscriberStarted = false;
         }
         
+        [Test]
+        public void WorksWithInprocSubscribers()
+        {
+
+            Context context = new Context(1);
+
+            Publisher.Start(new Publisher(
+                Configuration.LoadDefault()
+                    .ConfigurePublisherSocket(s => s.Address = "inproc://publisher")
+                    .ConfigureSyncSocket(s => s.Address = "inproc://sync"),
+                context));
+
+            this.subscriberTask = new Task(() => this.StartSubscriber(1, "inproc://publisher", "inproc://sync", context));
+            this.subscriberTask.Start(); // start subscriber to listen to messages
+
+            this.subscriberReadyEvent.WaitOne(5000);
+
+            this.OpenSessionAndSaveDogWithChild();
+            this.subscriberTask.Wait(); // wait until subscriber finished
+
+            Publisher.Stop();
+
+            Assert.AreEqual(1, this.recievedMessages.Count(m => m.Contains("opened session")), "Did not recieve session opened message for all sessions.");
+        }
+
         [Test]
         public void OpeningMultipleSessionsInDifferentThreads()
         {
@@ -78,7 +103,7 @@
 
             Task.WaitAll(tasks);
 
-            Publisher.Shutdown();
+            Publisher.Stop();
             this.subscriberTask.Wait(); // wait until subscriber finished
 
             Assert.AreEqual(expectedSessions, this.recievedMessages.Count(m => m.Contains("opened session")), "Did not recieve session opened message for all sessions.");
@@ -94,7 +119,7 @@
             this.OpenSessionAndSaveDogWithChild();
             this.subscriberTask.Wait(); // wait until subscriber finished
 
-            Publisher.Shutdown();
+            Publisher.Stop();
 
             Assert.AreEqual(1, this.recievedMessages.Count(m => m.Contains("opened session")), "Did not recieve session opened message for all sessions.");
         }
@@ -106,7 +131,7 @@
             {   
                 Publisher.Start();
                 OpenSessionAndSaveDogWithChild();
-                Publisher.Shutdown();
+                Publisher.Stop();
 
                 OpenSessionAndSaveDogWithChild();
                 OpenSessionAndSave(
@@ -131,12 +156,10 @@
 
         private void StartSubscriberThread(int expectedSessions)
         {
-            this.subscriberTask = new Task(() => this.StartSubscriber(expectedSessions));
+            this.subscriberTask = new Task(() => this.StartSubscriber(expectedSessions, "tcp://localhost:68748", "tcp://localhost:68747", new Context(1)));
             this.subscriberTask.Start(); // start subscriber to listen to messages
 
-            while (!this.subscriberStarted)
-            {
-            }
+            this.subscriberReadyEvent.WaitOne(5000);
         }
 
         private void OpenSessionAndSaveDogWithChild()
@@ -177,20 +200,20 @@
             }
         }
 
-        private void StartSubscriber(int expectedSessions)
+        private void StartSubscriber(int expectedSessions, string publisherAddress, string syncAddress, Context context)
         {
             this.recievedMessages.Clear();
-
-            using(var context = new Context(1))
+            
             using (Socket subscriber = context.Socket(SocketType.SUB),
                 syncClient = context.Socket(SocketType.REQ))
             {
                 subscriber.Subscribe("", Encoding.Unicode);
                 subscriber.Linger = 0;
-                subscriber.Connect("tcp://localhost:68748");
-                subscriberStarted = true;
+                subscriber.Connect(publisherAddress);
 
-                syncClient.Connect("tcp://localhost:68747");
+                this.subscriberReadyEvent.Set();
+
+                syncClient.Connect(syncAddress);
 
                 syncClient.Send("", Encoding.Unicode);
                 syncClient.Recv();
